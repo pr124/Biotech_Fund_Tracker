@@ -17,3 +17,6 @@ env/
 # IDE/editor-specific settings
 .vscode/
 .idea/
+
+# VS Code workspace file
+biotech-fund-tracker.code-workspace
