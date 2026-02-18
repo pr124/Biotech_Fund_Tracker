@@ -1,0 +1,19 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Output directory for generated CSV files
+# As specified in README.md
+data/
+
+# Python virtual environment
+venv/
+.venv/
+env/
+.env/
+
+# IDE/editor-specific settings
+.vscode/
+.idea/
