@@ -13,50 +13,50 @@ A Python tool to track and analyze 13F filings from 38 specialist biotech hedge 
 - **Automated Data Collection**: Fetches data directly from SEC EDGAR API
 - **CSV Export**: All data saved to CSV files for further analysis
 
-## Funds Tracked (38 Total)
+## Funds Tracked (40 Total)
 
 The tracker monitors these specialist biotech funds:
 
-Boxer Capital Management, LLC
-Checkpoint Capital
-Caligan Partners LP
-Octagon Capital Advisors LP
-Perceptive Advisors LLC
-Exome Asset Management LLC
-Avoro Capital Advisors LLC
-Affinity Asset Advisors, LLC
-ADAR1 Capital Management, LLC
-Saturn V Capital Management LP
-Greatpoint Partners
-Vestal Point Capital, LP
-RTW Investments, LP
-Soleus Capital Management, L.P.
-Ally Bridge Group (NY) LLC
-Ikarian Capital, LLC
-RA Capital Management, L.P.
-Stonepine Capital Management
-Cormorant Asset Management LP
-DAFNA Capital Management LLC
-Paradigm Biocapital Advisors LP
-Rosalind Advisors
-Orbimed Advisors LLC
-Darwin Global Management
-Baker Bros Advisors
-TCG Crossover Management, LLC
-Acuta Capital Partners
-Artia Global Parners
-BVF Inc
-Commodore Capital
-Deep Track Capital
-Deerfield Management
-Logos Capital
-BioImpact Capital
-OpalEye Management
-Tang Capital Management
-Eagle Health Investments LP
-Versant Venture Management, LLC
-Squadron Capital Management LLC
-Stempoint Capital LP
+- Boxer Capital Management, LLC
+- Checkpoint Capital
+- Caligan Partners LP
+- Octagon Capital Advisors LP
+- Perceptive Advisors LLC
+- Exome Asset Management LLC
+- Avoro Capital Advisors LLC
+- Affinity Asset Advisors, LLC
+- ADAR1 Capital Management, LLC
+- Saturn V Capital Management LP
+- Greatpoint Partners
+- Vestal Point Capital, LP
+- RTW Investments, LP
+- Soleus Capital Management, L.P.
+- Ally Bridge Group (NY) LLC
+- Ikarian Capital, LLC
+- RA Capital Management, L.P.
+- Stonepine Capital Management
+- Cormorant Asset Management LP
+- DAFNA Capital Management LLC
+- Paradigm Biocapital Advisors LP
+- Rosalind Advisors
+- Orbimed Advisors LLC
+- Darwin Global Management
+- Baker Bros Advisors
+- TCG Crossover Management, LLC
+- Acuta Capital Partners
+- Artia Global Parners
+- BVF Inc
+- Commodore Capital
+- Deep Track Capital
+- Deerfield Management
+- Logos Capital
+- BioImpact Capital
+- OpalEye Management
+- Tang Capital Management
+- Eagle Health Investments LP
+- Versant Venture Management, LLC
+- Squadron Capital Management LLC
+- Stempoint Capital LP
 
 ## Installation
 
