@@ -62,7 +62,9 @@ FUNDS = {
     'OpalEye Management': '0001595855',
     'Tang Capital Management': '0001232621',
     'Eagle Health Investments LP': '0001842545',
-    'Versant Venture Management, LLC': '0001560009'
+    'Versant Venture Management, LLC': '0001560009',
+    'Squadron Capital Management LLC': '0002050709',
+    'Stempoint Capital LP': '0001952142',
 }
 
 
