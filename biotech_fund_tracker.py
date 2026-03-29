@@ -77,7 +77,7 @@ class SEC13FTracker:
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
 
-    def get_recent_filings(self, cik: str, fund_name: str, count: int = 5) -> List[Dict]:
+    def get_recent_filings(self, cik: str, fund_name: str, count: int = 5, include_amendments: bool = True) -> List[Dict]:
         """Get recent 13F-HR filings for a given CIK"""
         # Ensure CIK is padded to 10 digits for the API
         cik_clean = cik.zfill(10)
@@ -100,7 +100,7 @@ class SEC13FTracker:
             # Find 13F-HR filings
             for i in range(len(recent_filings.get('form', []))):
                 form_type = recent_filings['form'][i]
-                if form_type in ['13F-HR', '13F-HR/A']:
+                if form_type == '13F-HR' or (include_amendments and form_type == '13F-HR/A'):
                     filing_date = recent_filings['filingDate'][i]
                     accession_number = recent_filings['accessionNumber'][i]
                     primary_document = recent_filings['primaryDocument'][i]
@@ -122,6 +122,26 @@ class SEC13FTracker:
         except requests.exceptions.RequestException as e:
             print(f"  Error fetching filings for {fund_name}: {e}")
             return []
+
+    def get_selected_filing(
+        self,
+        cik: str,
+        fund_name: str,
+        filing_index: int = 0,
+        include_amendments: bool = True
+    ) -> Optional[Dict]:
+        """Get a single filing by recency index with optional amendment filtering."""
+        filings = self.get_recent_filings(
+            cik,
+            fund_name,
+            count=filing_index + 1,
+            include_amendments=include_amendments
+        )
+
+        if len(filings) <= filing_index:
+            return None
+
+        return filings[filing_index]
 
     def parse_13f_xml(self, accession_number: str, cik: str, primary_document: Optional[str] = None) -> pd.DataFrame:
         """Parse 13F-HR XML filing to extract holdings"""
@@ -448,24 +468,33 @@ class SEC13FTracker:
         except Exception as e:
             return None
 
-    def get_all_latest_filings(self) -> pd.DataFrame:
-        """Get the most recent 13F filing for all funds"""
+    def get_filings_summary(
+        self,
+        filing_index: int = 0,
+        label: str = 'latest',
+        include_amendments: bool = True
+    ) -> pd.DataFrame:
+        """Get a summary of filings for all funds by recency index."""
         all_filings = []
 
-        print(f"Fetching latest 13F filings for {len(FUNDS)} funds...")
+        print(f"Fetching {label} 13F filings for {len(FUNDS)} funds...")
         print("-" * 80)
 
         for fund_name, cik in FUNDS.items():
             print(f"Processing: {fund_name} (CIK: {cik})")
 
-            filings = self.get_recent_filings(cik, fund_name, count=1)
+            filing = self.get_selected_filing(
+                cik,
+                fund_name,
+                filing_index=filing_index,
+                include_amendments=include_amendments
+            )
 
-            if filings:
-                latest = filings[0]
-                all_filings.append(latest)
-                print(f"  Found: {latest['form_type']} filed on {latest['filing_date']}")
+            if filing:
+                all_filings.append(filing)
+                print(f"  Found: {filing['form_type']} filed on {filing['filing_date']}")
             else:
-                print(f"  No 13F filings found")
+                print(f"  No {label} 13F filing found")
 
             print()
 
@@ -473,7 +502,7 @@ class SEC13FTracker:
 
         if not df.empty:
             # Save to CSV
-            output_file = self.output_dir / f'latest_filings_{datetime.now().strftime("%Y%m%d")}.csv'
+            output_file = self.output_dir / f'{label}_filings_{datetime.now().strftime("%Y%m%d")}.csv'
             try:
                 df.to_csv(output_file, index=False)
                 print(f"\nSaved filings summary to: {output_file}")
@@ -482,33 +511,54 @@ class SEC13FTracker:
 
         return df
 
-    def get_fund_holdings(self, fund_name: str, cik: str) -> pd.DataFrame:
-        """Get detailed holdings for a specific fund's latest 13F"""
+    def get_all_latest_filings(self) -> pd.DataFrame:
+        """Get the most recent 13F filing for all funds"""
+        return self.get_filings_summary(filing_index=0, label='latest')
+
+    def get_all_previous_filings(self) -> pd.DataFrame:
+        """Get the previous 13F filing for all funds"""
+        return self.get_filings_summary(filing_index=1, label='previous', include_amendments=False)
+
+    def get_fund_holdings(
+        self,
+        fund_name: str,
+        cik: str,
+        filing_index: int = 0,
+        include_amendments: bool = True
+    ) -> pd.DataFrame:
+        """Get detailed holdings for a specific fund by filing recency."""
         print(f"Fetching holdings for {fund_name}...")
 
-        filings = self.get_recent_filings(cik, fund_name, count=1)
+        filing = self.get_selected_filing(
+            cik,
+            fund_name,
+            filing_index=filing_index,
+            include_amendments=include_amendments
+        )
 
-        if not filings:
+        if not filing:
             print(f"No filings found for {fund_name}")
             return pd.DataFrame()
 
-        latest = filings[0]
-        print(f"Parsing {latest['form_type']} filed on {latest['filing_date']}...")
+        print(f"Parsing {filing['form_type']} filed on {filing['filing_date']}...")
 
-        holdings = self.parse_13f_xml(latest['accession_number'], cik, latest.get('primary_document'))
+        holdings = self.parse_13f_xml(filing['accession_number'], cik, filing.get('primary_document'))
 
         if not holdings.empty:
             holdings['fund_name'] = fund_name
-            holdings['filing_date'] = latest['filing_date']
+            holdings['filing_date'] = filing['filing_date']
 
             # Sort by value
             holdings = holdings.sort_values('value', ascending=False)
 
             # Save to CSV
             safe_name = re.sub(r'[^\w\s-]', '', fund_name).replace(' ', '_')
-            output_file = self.output_dir / f'{safe_name}_holdings_{latest["filing_date"]}.csv'
-            holdings.to_csv(output_file, index=False)
-            print(f"Saved {len(holdings)} holdings to: {output_file}")
+            output_file = self.output_dir / f'{safe_name}_holdings_{filing["filing_date"]}.csv'
+            try:
+                holdings.to_csv(output_file, index=False)
+                print(f"Saved {len(holdings)} holdings to: {output_file}")
+            except PermissionError:
+                print(f"Note: Could not save to {output_file} (file in use)")
 
         return holdings
 
@@ -616,7 +666,12 @@ class SEC13FTracker:
 
         print("\n" + "=" * 80)
 
-    def generate_full_summary_report(self):
+    def generate_full_summary_report(
+        self,
+        filing_index: int = 0,
+        include_amendments: bool = True,
+        label: str = 'most_recent'
+    ):
         """Generate a comprehensive summary report with filings, holdings, and AUM for all funds"""
         print(f"\n{'=' * 80}")
         print("GENERATING FULL SUMMARY REPORT")
@@ -625,16 +680,21 @@ class SEC13FTracker:
         print("This may take several minutes...")
         print("-" * 80)
 
-        # Step 1: Get all latest filings to know filing dates
+        # Step 1: Get filings to know filing dates
         print("\nStep 1: Getting filing dates for all funds...")
         filings_dict = {}
         for fund_name, cik in FUNDS.items():
-            filings = self.get_recent_filings(cik, fund_name, count=1)
-            if filings:
+            filing = self.get_selected_filing(
+                cik,
+                fund_name,
+                filing_index=filing_index,
+                include_amendments=include_amendments
+            )
+            if filing:
                 filings_dict[fund_name] = {
-                    'filing_date': filings[0]['filing_date'],
-                    'form_type': filings[0]['form_type'],
-                    'accession_number': filings[0]['accession_number']
+                    'filing_date': filing['filing_date'],
+                    'form_type': filing['form_type'],
+                    'accession_number': filing['accession_number']
                 }
             time.sleep(RATE_LIMIT_DELAY)
 
@@ -647,7 +707,12 @@ class SEC13FTracker:
             print(f"Processing: {fund_name}")
             
             # Get holdings
-            holdings = self.get_fund_holdings(fund_name, cik)
+            holdings = self.get_fund_holdings(
+                fund_name,
+                cik,
+                filing_index=filing_index,
+                include_amendments=include_amendments
+            )
             
             # Get filing date
             filing_date = filings_dict.get(fund_name, {}).get('filing_date', 'N/A')
@@ -702,7 +767,7 @@ class SEC13FTracker:
         df = pd.DataFrame(fund_data)
         
         # Save combined file with all data
-        output_file = self.output_dir / f'complete_summary_{datetime.now().strftime("%Y%m%d")}.csv'
+        output_file = self.output_dir / f'complete_summary_{label}_{datetime.now().strftime("%Y%m%d")}.csv'
         try:
             df.to_csv(output_file, index=False)
             print(f"\nSaved complete summary to: {output_file}")
@@ -710,7 +775,7 @@ class SEC13FTracker:
             print(f"\nNote: Could not save to {output_file} (file in use)")
 
         # Save AUM data
-        aum_file = self.output_dir / f'fund_aum_{datetime.now().strftime("%Y%m%d")}.csv'
+        aum_file = self.output_dir / f'fund_aum_{label}_{datetime.now().strftime("%Y%m%d")}.csv'
         try:
             aum_df.to_csv(aum_file, index=False)
             print(f"Saved AUM data to: {aum_file}")
@@ -774,7 +839,12 @@ class SEC13FTracker:
 
         return aum_info
 
-    def get_all_funds_holdings(self) -> pd.DataFrame:
+    def get_all_funds_holdings(
+        self,
+        filing_index: int = 0,
+        include_amendments: bool = True,
+        label: str = 'most_recent'
+    ) -> pd.DataFrame:
         """Get holdings for all funds and save to a combined file with funds as rows"""
         print(f"\n{'=' * 80}")
         print("FETCHING HOLDINGS FOR ALL FUNDS")
@@ -785,22 +855,32 @@ class SEC13FTracker:
 
         fund_data = []
         
-        # First, get latest filings to know filing dates
+        # First, get filings to know filing dates
         print("\nGetting filing dates...")
         filings_dict = {}
         for fund_name, cik in FUNDS.items():
-            filings = self.get_recent_filings(cik, fund_name, count=1)
-            if filings:
+            filing = self.get_selected_filing(
+                cik,
+                fund_name,
+                filing_index=filing_index,
+                include_amendments=include_amendments
+            )
+            if filing:
                 filings_dict[fund_name] = {
-                    'filing_date': filings[0]['filing_date'],
-                    'form_type': filings[0]['form_type']
+                    'filing_date': filing['filing_date'],
+                    'form_type': filing['form_type']
                 }
             time.sleep(RATE_LIMIT_DELAY)
         
         # Now get holdings for each fund
         for fund_name, cik in FUNDS.items():
             print(f"Processing: {fund_name}")
-            holdings = self.get_fund_holdings(fund_name, cik)
+            holdings = self.get_fund_holdings(
+                fund_name,
+                cik,
+                filing_index=filing_index,
+                include_amendments=include_amendments
+            )
             
             # Get filing date
             filing_date = filings_dict.get(fund_name, {}).get('filing_date', 'N/A')
@@ -842,7 +922,7 @@ class SEC13FTracker:
         df = pd.DataFrame(fund_data)
 
         # Save to CSV
-        output_file = self.output_dir / f'all_funds_combined_{datetime.now().strftime("%Y%m%d")}.csv'
+        output_file = self.output_dir / f'all_funds_combined_{label}_{datetime.now().strftime("%Y%m%d")}.csv'
         try:
             df.to_csv(output_file, index=False)
             print(f"\nSaved {len(df)} funds to: {output_file}")
@@ -934,13 +1014,16 @@ def print_menu():
     print("=" * 80)
     print("\nOptions:")
     print("1. Get latest filings summary for all funds")
-    print("2. Get detailed holdings for a specific fund")
-    print("3. Get holdings for ALL funds")
-    print("4. Analyze holdings overlap across all funds")
-    print("5. Find stocks with highest total value held")
-    print("6. Calculate AUM for all funds")
-    print("7. Generate full summary report (all data)")
-    print("8. Exit")
+    print("2. Get previous filings summary for all funds")
+    print("3. Get detailed holdings for a specific fund")
+    print("4. Get holdings for ALL funds from most recent filings")
+    print("5. Get holdings for ALL funds from previous recent filings")
+    print("6. Analyze holdings overlap across all funds")
+    print("7. Find stocks with highest total value held")
+    print("8. Calculate AUM for all funds")
+    print("9. Generate full summary report from most recent filings")
+    print("10. Generate full summary report from previous filings")
+    print("11. Exit")
 
 def main():
     """Main entry point"""
@@ -949,12 +1032,15 @@ def main():
     print_menu()
 
     while True:
-        choice = input("\nSelect option (1-8): ").strip()
+        choice = input("\nSelect option (1-11): ").strip()
 
         if choice == '1':
             tracker.get_all_latest_filings()
 
         elif choice == '2':
+            tracker.get_all_previous_filings()
+
+        elif choice == '3':
             print("\nAvailable funds:")
             for i, fund_name in enumerate(FUNDS.keys(), 1):
                 print(f"{i}. {fund_name}")
@@ -967,24 +1053,30 @@ def main():
             except (ValueError, IndexError):
                 print("Invalid selection")
 
-        elif choice == '3':
+        elif choice == '4':
             tracker.get_all_funds_holdings()
 
-        elif choice == '4':
+        elif choice == '5':
+            tracker.get_all_funds_holdings(filing_index=1, include_amendments=False, label='previous')
+
+        elif choice == '6':
             min_funds = input("Minimum number of funds holding stock (default 3): ").strip()
             min_funds = int(min_funds) if min_funds else 3
             tracker.analyze_overlap(min_funds=min_funds)
 
-        elif choice == '5':
+        elif choice == '7':
             tracker.analyze_top_stocks_by_value()
 
-        elif choice == '6':
+        elif choice == '8':
             tracker.get_all_funds_aum()
 
-        elif choice == '7':
+        elif choice == '9':
             tracker.generate_full_summary_report()
 
-        elif choice == '8':
+        elif choice == '10':
+            tracker.generate_full_summary_report(filing_index=1, include_amendments=False, label='previous')
+
+        elif choice == '11':
             print("Exiting...")
             break
 
@@ -992,7 +1084,7 @@ def main():
             print("Invalid option")
         
         # Show menu again after each command (except exit)
-        if choice != '8':
+        if choice != '11':
             print_menu()
 
 

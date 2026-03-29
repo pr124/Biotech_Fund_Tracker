@@ -4,7 +4,7 @@ A Python tool to track and analyze 13F filings from 38 specialist biotech hedge 
 
 ## Features
 
-- **Track Latest Filings**: Get the most recent 13F-HR filings for all 38 biotech funds
+- **Track Latest Filings**: Get the most recent 13F-HR filings for all 40 biotech funds
 - **Detailed Holdings**: Extract and analyze detailed holdings for any specific fund
 - **Get All Holdings**: Fetch and save holdings for ALL funds at once
 - **AUM Analysis**: Calculate Assets Under Management for each fund based on holdings value
@@ -74,18 +74,21 @@ pip install -r requirements.txt
 Run the tracker interactively:
 
 ```bash
-python biotech_13f_tracker.py
+python biotech_fund_tracker.py
 ```
 
 You'll see a menu with options:
 1. Get latest filings summary for all funds
-2. Get detailed holdings for a specific fund
-3. Get holdings for ALL funds
-4. Analyze holdings overlap across all funds
-5. Find stocks with highest total value held
-6. Generate full summary report
-7. Calculate AUM for all funds
-8. Exit
+2. Get previous filings summary for all funds
+3. Get detailed holdings for a specific fund
+4. Get holdings for ALL funds from most recent filings
+5. Get holdings for ALL funds from previous recent filings
+6. Analyze holdings overlap across all funds
+7. Find stocks with highest total value held
+8. Calculate AUM for all funds
+9. Generate full summary report from most recent filings
+10. Generate full summary report from previous filings
+11. Exit
 
 ### Command-Line Usage
 
