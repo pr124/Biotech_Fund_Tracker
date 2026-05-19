@@ -88,7 +88,16 @@ You'll see a menu with options:
 8. Calculate AUM for all funds
 9. Generate full summary report from most recent filings
 10. Generate full summary report from previous filings
-11. Exit
+11. Get filings summary for any filing period
+12. Generate full summary report for any filing period
+13. Exit
+
+For the "any filing period" options, enter a filing number by recency:
+
+- `1` = latest filing
+- `2` = previous filing
+- `3` = third most recent filing
+- `4` = fourth most recent filing, and so on
 
 ### Command-Line Usage
 
@@ -143,6 +152,9 @@ top_stocks = tracker.analyze_top_stocks_by_value()
 All data is saved to the `data/` directory:
 
 - `latest_filings_YYYYMMDD.csv` - Summary of latest filings for all funds
+- `filing_N_filings_YYYYMMDD.csv` - Summary of the Nth most recent filings for all funds
+- `complete_summary_filing_N_YYYYMMDD.csv` - Full report for the Nth most recent filings
+- `fund_aum_filing_N_YYYYMMDD.csv` - AUM report for the Nth most recent filings
 - `{fund_name}_holdings_YYYY-MM-DD.csv` - Detailed holdings for specific funds
 - `all_funds_combined_YYYYMMDD.csv` - Combined holdings for all funds
 - `fund_aum_YYYYMMDD.csv` - AUM calculations for all funds (value in dollars)

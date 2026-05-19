@@ -152,7 +152,9 @@ class PreviousFilingsTests(unittest.TestCase):
         self.assertIn("5. Get holdings for ALL funds from previous recent filings", output)
         self.assertIn("9. Generate full summary report from most recent filings", output)
         self.assertIn("10. Generate full summary report from previous filings", output)
-        self.assertIn("11. Exit", output)
+        self.assertIn("11. Get filings summary for any filing period", output)
+        self.assertIn("12. Generate full summary report for any filing period", output)
+        self.assertIn("13. Exit", output)
 
     def test_get_fund_holdings_continues_when_csv_is_locked(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -189,12 +191,46 @@ class PreviousFilingsTests(unittest.TestCase):
                 recorded_calls.append((filing_index, include_amendments, label))
 
         with patch("biotech_fund_tracker.SEC13FTracker", return_value=FakeTracker()):
-            with patch("builtins.input", side_effect=["10", "11"]):
+            with patch("builtins.input", side_effect=["10", "13"]):
                 buffer = io.StringIO()
                 with redirect_stdout(buffer):
                     main()
 
         self.assertIn((1, False, "previous"), recorded_calls)
+
+    def test_main_routes_any_filings_summary_command(self):
+        from biotech_fund_tracker import main
+
+        recorded_calls = []
+
+        class FakeTracker:
+            def get_filings_summary(self, filing_index=0, label="latest", include_amendments=True):
+                recorded_calls.append((filing_index, include_amendments, label))
+
+        with patch("biotech_fund_tracker.SEC13FTracker", return_value=FakeTracker()):
+            with patch("builtins.input", side_effect=["11", "3", "13"]):
+                buffer = io.StringIO()
+                with redirect_stdout(buffer):
+                    main()
+
+        self.assertIn((2, False, "filing_3"), recorded_calls)
+
+    def test_main_routes_any_full_summary_command(self):
+        from biotech_fund_tracker import main
+
+        recorded_calls = []
+
+        class FakeTracker:
+            def generate_full_summary_report(self, filing_index=0, include_amendments=True, label="most_recent"):
+                recorded_calls.append((filing_index, include_amendments, label))
+
+        with patch("biotech_fund_tracker.SEC13FTracker", return_value=FakeTracker()):
+            with patch("builtins.input", side_effect=["12", "4", "13"]):
+                buffer = io.StringIO()
+                with redirect_stdout(buffer):
+                    main()
+
+        self.assertIn((3, False, "filing_4"), recorded_calls)
 
 
 if __name__ == "__main__":

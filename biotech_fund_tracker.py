@@ -1023,7 +1023,28 @@ def print_menu():
     print("8. Calculate AUM for all funds")
     print("9. Generate full summary report from most recent filings")
     print("10. Generate full summary report from previous filings")
-    print("11. Exit")
+    print("11. Get filings summary for any filing period")
+    print("12. Generate full summary report for any filing period")
+    print("13. Exit")
+
+def prompt_filing_selection() -> Tuple[int, str, bool]:
+    """Prompt for a filing recency number and return filing_index, label, amendment handling."""
+    while True:
+        filing_number = input("Select filing number (1 latest, 2 previous, 3 third most recent, etc.): ").strip()
+        try:
+            filing_number_int = int(filing_number)
+        except ValueError:
+            print("Invalid filing number")
+            continue
+
+        if filing_number_int < 1:
+            print("Filing number must be 1 or greater")
+            continue
+
+        filing_index = filing_number_int - 1
+        label = "latest" if filing_number_int == 1 else f"filing_{filing_number_int}"
+        include_amendments = filing_number_int == 1
+        return filing_index, label, include_amendments
 
 def main():
     """Main entry point"""
@@ -1032,7 +1053,7 @@ def main():
     print_menu()
 
     while True:
-        choice = input("\nSelect option (1-11): ").strip()
+        choice = input("\nSelect option (1-13): ").strip()
 
         if choice == '1':
             tracker.get_all_latest_filings()
@@ -1077,6 +1098,22 @@ def main():
             tracker.generate_full_summary_report(filing_index=1, include_amendments=False, label='previous')
 
         elif choice == '11':
+            filing_index, label, include_amendments = prompt_filing_selection()
+            tracker.get_filings_summary(
+                filing_index=filing_index,
+                label=label,
+                include_amendments=include_amendments
+            )
+
+        elif choice == '12':
+            filing_index, label, include_amendments = prompt_filing_selection()
+            tracker.generate_full_summary_report(
+                filing_index=filing_index,
+                include_amendments=include_amendments,
+                label=label
+            )
+
+        elif choice == '13':
             print("Exiting...")
             break
 
@@ -1084,7 +1121,7 @@ def main():
             print("Invalid option")
         
         # Show menu again after each command (except exit)
-        if choice != '11':
+        if choice != '13':
             print_menu()
 
 
